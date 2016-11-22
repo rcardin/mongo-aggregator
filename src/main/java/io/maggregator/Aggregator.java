@@ -51,7 +51,7 @@ import java.util.function.Function;
 import static com.mongodb.client.model.Aggregates.match;
 
 /**
- * Please, insert description here.
+ * Fluent API for MongoDB Aggregation Framework.
  *
  * @author Riccardo Cardin
  * @version 1.0
