@@ -74,8 +74,12 @@ public class Aggregator {
      *
      * @param mongoDatabase Connection to the database
      * @return The aggregator
+     *
+     * @throws IllegalArgumentException if {@code mongoDatabase} is null
      */
     public static final Aggregator of(MongoDatabase mongoDatabase) {
+        if (mongoDatabase == null)
+            throw new IllegalArgumentException("MongoDatabase cannot be null");
         return new Aggregator(mongoDatabase);
     }
 
