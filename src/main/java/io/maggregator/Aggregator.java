@@ -139,11 +139,9 @@ public class Aggregator {
      *                                  or the group by clause or the transformation are not present
      */
     public <T> T execute(Function<AggregateIterable<Document>, T> transformation) {
-        if (collection == null || filter == null || projection == null || groupBy == null ||
-                transformation == null) {
-            throw new IllegalArgumentException("Aggregation cannot be performed due to the " +
-                    "lack of some input parameters");
-        }
+
+        validate(transformation);
+
         MongoCollection collection = mongoDatabase.getCollection(this.collection);
 
         List<Bson> pipeline = Arrays.asList(match(filter), projection, groupBy);
@@ -151,6 +149,14 @@ public class Aggregator {
         final AggregateIterable aggregate = collection.aggregate(pipeline);
 
         return (T) transformation.apply(aggregate);
+    }
+
+    private <T> void validate(Function<AggregateIterable<Document>, T> transformation) throws IllegalArgumentException {
+        if (collection == null || filter == null || projection == null || groupBy == null ||
+                transformation == null) {
+            throw new IllegalArgumentException("Aggregation cannot be performed due to the " +
+                    "lack of some input parameters");
+        }
     }
 
     /**
