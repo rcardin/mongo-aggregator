@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License (MIT)
  * <p>
  * Copyright (c) 2015 Riccardo Cardin
@@ -21,15 +21,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  * <p>
- * Please, insert description here.
- *
- * @author Riccardo Cardin
- * @version 1.0
- * @since 1.0
- */
-
-/**
- * Please, insert description here.
  *
  * @author Riccardo Cardin
  * @version 1.0
@@ -39,12 +30,23 @@ package io.maggregator;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.MongoIterable;
+import com.mongodb.client.model.BsonField;
+import io.maggregator.util.EmbeddedMongo;
+import org.bson.Document;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.mongodb.client.model.Aggregates.group;
+import static com.mongodb.client.model.Aggregates.project;
+import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Projections.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 /**
  * Unit test of class {@link Aggregator}.
@@ -53,21 +55,33 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @version 1.0
  * @since 1.0
  */
-@RunWith(MockitoJUnitRunner.class)
 public class AggregatorTest {
 
     private static final String MISSING_DATABASE = "MongoDatabase cannot be null";
     private static final String MISSING_PARAM = "Aggregation cannot be performed due to the " +
             "lack of some input parameters";
 
-    @Mock
-    private MongoDatabase database;
+    private static final String DATABASE = "test";
+    private static final String COLLECTION = "collection";
+
+    private static EmbeddedMongo embeddedMongo;
+
+    @BeforeClass
+    public static void setUp() throws Exception {
+        embeddedMongo = new EmbeddedMongo();
+        embeddedMongo.importFile(DATABASE, COLLECTION, "pipeline-test.json");
+    }
+
+    @AfterClass
+    public static void tearDown() throws Exception {
+        embeddedMongo.close();
+    }
 
     @Test
     public void executeShouldThrowAnExceptionIfDatabaseIsNotSet() {
         try {
             Aggregator.of(null)
-                    .execute(documents -> documents.first());
+                    .execute(MongoIterable::first);
         } catch (IllegalArgumentException iae) {
             assertThat(iae.getMessage()).isEqualTo(MISSING_DATABASE);
         }
@@ -76,11 +90,11 @@ public class AggregatorTest {
     @Test
     public void executeShouldThrowAnExceptionIfCollectionIsNotSet() {
         try {
-            Aggregator.of(database)
+            Aggregator.of(mock(MongoDatabase.class))
                     .filter(new BasicDBObject())
                     .projection(new BasicDBObject())
                     .groupBy(new BasicDBObject())
-                    .execute(documents -> documents.first());
+                    .execute(MongoIterable::first);
         } catch (IllegalArgumentException iae) {
             assertThat(iae.getMessage()).isEqualTo(MISSING_PARAM);
         }
@@ -89,11 +103,11 @@ public class AggregatorTest {
     @Test
     public void executeShouldThrowAnExceptionIfFiltersAreNotSet() {
         try {
-            Aggregator.of(database)
+            Aggregator.of(mock(MongoDatabase.class))
                     .collection("collection")
                     .projection(new BasicDBObject())
                     .groupBy(new BasicDBObject())
-                    .execute(documents -> documents.first());
+                    .execute(MongoIterable::first);
         } catch (IllegalArgumentException iae) {
             assertThat(iae.getMessage()).isEqualTo(MISSING_PARAM);
         }
@@ -102,11 +116,11 @@ public class AggregatorTest {
     @Test
     public void executeShouldThrowAnExceptionIfProjectionsAreNotSet() {
         try {
-            Aggregator.of(database)
+            Aggregator.of(mock(MongoDatabase.class))
                     .collection("collection")
                     .filter(new BasicDBObject())
                     .groupBy(new BasicDBObject())
-                    .execute(documents -> documents.first());
+                    .execute(MongoIterable::first);
         } catch (IllegalArgumentException iae) {
             assertThat(iae.getMessage()).isEqualTo(MISSING_PARAM);
         }
@@ -115,13 +129,77 @@ public class AggregatorTest {
     @Test
     public void executeShouldThrowAnExceptionIfGroupByIsNotSet() {
         try {
-            Aggregator.of(database)
+            Aggregator.of(mock(MongoDatabase.class))
                     .collection("collection")
                     .filter(new BasicDBObject())
                     .projection(new BasicDBObject())
-                    .execute(documents -> documents.first());
-        } catch (IllegalArgumentException iae) {
+                    .execute(MongoIterable::first);
+        }    catch (IllegalArgumentException iae) {
             assertThat(iae.getMessage()).isEqualTo(MISSING_PARAM);
         }
+    }
+
+    @Test
+    public void executeShouldFilterProperly() throws Exception {
+        List<Document> result =
+                Aggregator
+                        .of(embeddedMongo.mongoClient().getDatabase(DATABASE))
+                        .collection(COLLECTION)
+                        .filter(eq("name", "MongoDB"))
+                        .projection(project(fields(excludeId(), include("name", "count"))))
+                        .groupBy(group("$name", new BsonField("total", new BasicDBObject("$sum", "$count"))))
+                        .execute(documents -> {
+                            List<Document> list = new ArrayList<>();
+                            for (Document doc: documents) {
+                                list.add(doc);
+                            }
+                            return list;
+                        });
+        assertThat(result).hasSize(1);
+        // Check that the filter operation has thrown away all documents with name
+        // different from 'MongoDB'
+        assertThat(result.get(0)).containsEntry("_id", "MongoDB");
+    }
+
+    @Test
+    public void executeShouldProjectProperly() throws Exception {
+        List<Document> result =
+                Aggregator
+                        .of(embeddedMongo.mongoClient().getDatabase(DATABASE))
+                        .collection(COLLECTION)
+                        .filter(eq("name", "MongoDB"))
+                        .projection(project(fields(excludeId(), include("count"), computed("coords", "$info.x"))))
+                        .groupBy(group("$coords", new BsonField("total", new BasicDBObject("$sum", "$count"))))
+                        .execute(documents -> {
+                            List<Document> list = new ArrayList<>();
+                            for (Document doc: documents) {
+                                list.add(doc);
+                            }
+                            return list;
+                        });
+        assertThat(result).hasSize(1);
+        // Check that the projection has generated a new field 'coords'
+        assertThat(result.get(0)).containsEntry("_id", 203);
+    }
+
+    @Test
+    public void executeShouldGroupProperly() throws Exception {
+        List<Document> result =
+                Aggregator
+                .of(embeddedMongo.mongoClient().getDatabase(DATABASE))
+                .collection(COLLECTION)
+                .filter(eq("type", "database"))
+                .projection(project(fields(excludeId(), include("type", "count"))))
+                .groupBy(group("$type", new BsonField("total", new BasicDBObject("$sum", "$count"))))
+                .execute(documents -> {
+                    List<Document> list = new ArrayList<>();
+                    for (Document doc : documents) {
+                        list.add(doc);
+                    }
+                    return list;
+                });
+        assertThat(result).hasSize(1);
+        // Check that the group ha created a unique document that sums the 'count' field
+        assertThat(result.get(0)).containsEntry("total", 6);
     }
 }

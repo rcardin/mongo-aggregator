@@ -85,10 +85,10 @@ public class EmbeddedMongo implements AutoCloseable {
 
         mongodExe = starter.prepare(new MongodConfigBuilder()
                 .version(Version.Main.PRODUCTION)
-                .net(new Net(12345, Network.localhostIsIPv6()))
+                .net(new Net(port, Network.localhostIsIPv6()))
                 .build());
         mongod = mongodExe.start();
-        mongo = new MongoClient("localhost", 12345);
+        mongo = new MongoClient("localhost", port);
     }
 
     @Override
