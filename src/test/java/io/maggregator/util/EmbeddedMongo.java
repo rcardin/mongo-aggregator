@@ -117,7 +117,10 @@ public class EmbeddedMongo implements AutoCloseable {
 
         String resolvedJsonFile =
                 Thread.currentThread().getContextClassLoader().getResource(jsonFile).toString();
-        resolvedJsonFile=resolvedJsonFile.replaceFirst("file:",""); //.substring(1);
+        resolvedJsonFile = resolvedJsonFile.replaceFirst("file:","");
+        if (OsValidator.isWindows()) {
+            resolvedJsonFile = resolvedJsonFile.substring(1);
+        }
 
         IMongoImportConfig mongoImportConfig = new MongoImportConfigBuilder()
                 .version(Version.Main.PRODUCTION)
@@ -139,4 +142,15 @@ public class EmbeddedMongo implements AutoCloseable {
         return mongo;
     }
 
+    /**
+     * Class is taken from <a href="https://www.mkyong.com/java/how-to-detect-os-in-java-systemgetpropertyosname/">
+     *     How to detect OS in Java</a>.
+     */
+    private static class OsValidator {
+        private static String OS = System.getProperty("os.name").toLowerCase();
+
+        public static boolean isWindows() {
+            return (OS.indexOf("win") >= 0);
+        }
+    }
 }
