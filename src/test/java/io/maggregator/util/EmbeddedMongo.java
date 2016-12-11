@@ -117,7 +117,7 @@ public class EmbeddedMongo implements AutoCloseable {
 
         String resolvedJsonFile =
                 Thread.currentThread().getContextClassLoader().getResource(jsonFile).toString();
-        resolvedJsonFile=resolvedJsonFile.replaceFirst("file:","").substring(1);
+        resolvedJsonFile=resolvedJsonFile.replaceFirst("file:",""); //.substring(1);
 
         IMongoImportConfig mongoImportConfig = new MongoImportConfigBuilder()
                 .version(Version.Main.PRODUCTION)
