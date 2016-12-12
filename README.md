@@ -12,7 +12,7 @@ to easily create an *aggregation pipeline*, in a single Java statement.
 
 For example, take the definition of the following pipeline.
 
-```
+```java
 Aggregator
     .of(embeddedMongo.mongoClient().getDatabase(DATABASE))
     .collection(COLLECTION)
