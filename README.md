@@ -2,7 +2,7 @@
 # mongo-aggregator
 
 ## Introduction
-This library implements a fluent Java API for MongoDB Aggragation Framework. The
+This library implements a fluent Java API for MongoDB Aggregation Framework. The
 [MongoDB Aggregation framework](https://docs.mongodb.com/v3.4/aggregation/) processes data records and returns computed
 result. The library implements the [aggregation pipeline](https://docs.mongodb.com/v3.4/aggregation/#aggregation-pipeline).
 
